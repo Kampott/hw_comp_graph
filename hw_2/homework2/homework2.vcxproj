@@ -129,6 +129,10 @@ xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="homework2.cpp" />
