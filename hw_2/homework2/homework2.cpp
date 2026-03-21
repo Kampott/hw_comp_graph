@@ -171,7 +171,10 @@ bool DXApp::Init() {
     wcex.hInstance = m_hInstance;
     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wcex.lpszClassName = L"DXAppClass";
-    if (!RegisterClassEx(&wcex)) return false;
+    if (!RegisterClassEx(&wcex)) {
+        MessageBox(nullptr, L"RegisterClassEx failed", L"Error", MB_OK);
+        return false;
+    }
 
     //Create window
     RECT rc = { 0, 0, (LONG)m_width, (LONG)m_height };
@@ -179,7 +182,11 @@ bool DXApp::Init() {
     m_hWnd = CreateWindow(L"DXAppClass", L"Computer Graphics HW2", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top,
         nullptr, nullptr, m_hInstance, nullptr);
-    if (!m_hWnd) return false;
+    if (!m_hWnd) {
+        MessageBox(nullptr, L"CreateWindow failed", L"Error", MB_OK);
+        return false;
+    }
+
 
     SetWindowLongPtr(m_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
     ShowWindow(m_hWnd, SW_SHOW);
@@ -189,7 +196,10 @@ bool DXApp::Init() {
     HRESULT result;
     IDXGIFactory* pFactory = nullptr;
     result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&pFactory);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"CreateDXGIFactory failed", L"Error", MB_OK);
+        return false;
+    }
 
     IDXGIAdapter* pSelectedAdapter = nullptr;
     IDXGIAdapter* pAdapter = nullptr;
@@ -205,6 +215,7 @@ bool DXApp::Init() {
         adapterIdx++;
     }
     if (!pSelectedAdapter) {
+        MessageBox(nullptr, L"No suitable adapter found", L"Error", MB_OK);
         SAFE_RELEASE(pFactory);
         return false;
     }
@@ -219,6 +230,7 @@ bool DXApp::Init() {
         flags, levels, 1, D3D11_SDK_VERSION, &m_pDevice, &level, &m_pDeviceContext);
     SAFE_RELEASE(pSelectedAdapter);
     if (FAILED(result) || level != D3D_FEATURE_LEVEL_11_0) {
+        MessageBox(nullptr, L"D3D11CreateDevice failed", L"Error", MB_OK);
         SAFE_RELEASE(pFactory);
         return false;
     }
@@ -242,16 +254,25 @@ bool DXApp::Init() {
 
     result = pFactory->CreateSwapChain(m_pDevice, &swapChainDesc, &m_pSwapChain);
     SAFE_RELEASE(pFactory);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"CreateSwapChain failed", L"Error", MB_OK);
+        return false;
+    }
 
     //Create rtv
     ID3D11Texture2D* pBackBuffer = nullptr;
     result = m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"GetBuffer failed", L"Error", MB_OK);
+        return false;
+    }
 
     result = m_pDevice->CreateRenderTargetView(pBackBuffer, nullptr, &m_pBackBufferRTV);
     SAFE_RELEASE(pBackBuffer);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"CreateRenderTargetView failed", L"Error", MB_OK);
+        return false;
+    }
 
     //Create vertex buffer
     static const Vertex Vertices[] = {
@@ -269,7 +290,10 @@ bool DXApp::Init() {
     vbData.pSysMem = Vertices;
 
     result = m_pDevice->CreateBuffer(&vbDesc, &vbData, &m_pVertexBuffer);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"CreateBuffer VertexBuffer failed", L"Error", MB_OK);
+        return false;
+    }
     SetResourceName(m_pVertexBuffer, "VertexBuffer");
 
     //Create index buffer
@@ -284,7 +308,10 @@ bool DXApp::Init() {
     ibData.pSysMem = Indices;
 
     result = m_pDevice->CreateBuffer(&ibDesc, &ibData, &m_pIndexBuffer);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"CreateBuffer IndexBuffer failed", L"Error", MB_OK);
+        return false;
+    }
     SetResourceName(m_pIndexBuffer, "IndexBuffer");
 
     //Shaders
@@ -295,6 +322,7 @@ bool DXApp::Init() {
     result = m_pDevice->CreateVertexShader(pVSCode->GetBufferPointer(), pVSCode->GetBufferSize(), nullptr, &m_pVertexShader);
     if (FAILED(result)) {
         SAFE_RELEASE(pVSCode);
+        MessageBox(nullptr, L"CreateVertexShader failed", L"Error", MB_OK);
         return false;
     }
     SetResourceName(m_pVertexShader, "vertex.vs");
@@ -303,6 +331,7 @@ bool DXApp::Init() {
     result = CompileShaderFromFile(L"pixel.ps", &pPSCode);
     if (FAILED(result)) {
         SAFE_RELEASE(pVSCode);
+        MessageBox(nullptr, L"CompileShaderFromFile failed", L"Error", MB_OK);
         return false;
     }
 
@@ -310,6 +339,7 @@ bool DXApp::Init() {
     SAFE_RELEASE(pPSCode);
     if (FAILED(result)) {
         SAFE_RELEASE(pVSCode);
+        MessageBox(nullptr, L"CreatePixelShader failed", L"Error", MB_OK);
         return false;
     }
     SetResourceName(m_pPixelShader, "pixel.ps");
@@ -322,7 +352,10 @@ bool DXApp::Init() {
 
     result = m_pDevice->CreateInputLayout(InputDesc, ARRAYSIZE(InputDesc), pVSCode->GetBufferPointer(), pVSCode->GetBufferSize(), &m_pInputLayout);
     SAFE_RELEASE(pVSCode);
-    if (FAILED(result)) return false;
+    if (FAILED(result)) {
+        MessageBox(nullptr, L"CreateInputLayout failed", L"Error", MB_OK);
+        return false;
+    }
     SetResourceName(m_pInputLayout, "InputLayout");
 
     return true;
@@ -398,15 +431,16 @@ void DXApp::Run() {
                 exit = true;
             }
         }
-        else {
+        else {   
             Render();
         }
     }
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow) {
     DXApp app(hInstance);
     if (!app.Init()) {
+        MessageBox(nullptr, L"Init failed", L"Error", MB_OK);
         return 1;
     }
     app.Run();
