@@ -15,8 +15,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="hw_4.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cube.ps">
+      <Filter>Исходные файлы</Filter>
+    </None>
+    <None Include="cube.vs">
+      <Filter>Исходные файлы</Filter>
+    </None>
+    <None Include="skybox.ps">
+      <Filter>Исходные файлы</Filter>
+    </None>
+    <None Include="skybox.vs">
+      <Filter>Исходные файлы</Filter>
+    </None>
   </ItemGroup>
 </Project>
