@@ -15,15 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="hw_3.cpp">
+    <ClCompile Include="hw_4.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex.vs">
+    <None Include="cube.ps">
       <Filter>Исходные файлы</Filter>
     </None>
-    <None Include="pixel.ps">
+    <None Include="cube.vs">
+      <Filter>Исходные файлы</Filter>
+    </None>
+    <None Include="skybox.ps">
+      <Filter>Исходные файлы</Filter>
+    </None>
+    <None Include="skybox.vs">
       <Filter>Исходные файлы</Filter>
     </None>
   </ItemGroup>

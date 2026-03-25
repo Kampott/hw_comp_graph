@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{edd0cfa2-00d9-4b83-875a-5a5525e84d2b}</ProjectGuid>
-    <RootNamespace>hw3</RootNamespace>
+    <ProjectGuid>{8f777a20-3967-43c6-8ada-7f4e68642654}</ProjectGuid>
+    <RootNamespace>hw4</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -110,8 +110,17 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
-xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
+      <Command>xcopy /Y "$(ProjectDir)cube.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)cube.ps" "$(OutDir)"
+xcopy /Y "$(ProjectDir)skybox.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)skybox.ps" "$(OutDir)"
+xcopy /Y "$(ProjectDir)cube.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_posx.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_negx.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_posy.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_negy.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_posz.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_negz.dds" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -130,16 +139,27 @@ xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
-xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
+      <Command>xcopy /Y "$(ProjectDir)cube.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)cube.ps" "$(OutDir)"
+xcopy /Y "$(ProjectDir)skybox.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)skybox.ps" "$(OutDir)"
+xcopy /Y "$(ProjectDir)cube.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_posx.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_negx.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_posy.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_negy.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_posz.dds" "$(OutDir)"
+xcopy /Y "$(ProjectDir)sky_negz.dds" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="hw_3.cpp" />
+    <ClCompile Include="hw_4.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="pixel.ps" />
-    <None Include="vertex.vs" />
+    <None Include="cube.ps" />
+    <None Include="cube.vs" />
+    <None Include="skybox.ps" />
+    <None Include="skybox.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
