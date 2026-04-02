@@ -4,6 +4,7 @@
 #include <dxgi.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
+
 #include <assert.h>
 #include <string>
 #include <vector>
@@ -12,7 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <float.h>
-#include <algorithm>
+#include <cstdio>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -48,12 +49,13 @@ struct TextureDesc {
 
 struct SceneBuffer {
     XMFLOAT4X4 vp;
-    XMFLOAT4 cameraPos;
+    XMFLOAT4X4 vpSky;   
+    XMFLOAT4   cameraPos;
 };
 
 struct GeomBuffer {
     XMFLOAT4X4 model;
-    XMFLOAT4 size; // x - size of sky sphere / sky cube
+    XMFLOAT4 size;
 };
 
 #pragma pack(push, 1)
@@ -147,20 +149,26 @@ static DXGI_FORMAT DDSFormatFromPixelFormat(const DDS_PIXELFORMAT& pf) {
 }
 
 static bool LoadDDS(const wchar_t* fileName, TextureDesc& textureDesc, bool topMipOnly = true) {
-    std::ifstream file(fileName, std::ios::binary);
-    if (!file) return false;
+    FILE* file = nullptr;
+    if (_wfopen_s(&file, fileName, L"rb") != 0 || !file) {
+        return false;
+    }
 
-    file.seekg(0, std::ios::end);
-    std::streamoff fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
+    _fseeki64(file, 0, SEEK_END);
+    long long fileSize = _ftelli64(file);
+    _fseeki64(file, 0, SEEK_SET);
 
-    if (fileSize < (std::streamoff)(sizeof(uint32_t) + sizeof(DDS_HEADER))) {
+    if (fileSize < (long long)(sizeof(uint32_t) + sizeof(DDS_HEADER))) {
+        fclose(file);
         return false;
     }
 
     std::vector<uint8_t> bytes((size_t)fileSize);
-    file.read(reinterpret_cast<char*>(bytes.data()), fileSize);
-    if (!file) return false;
+    size_t readCount = fread(bytes.data(), 1, bytes.size(), file);
+    fclose(file);
+    if (readCount != bytes.size()) {
+        return false;
+    }
 
     const uint32_t* magic = reinterpret_cast<const uint32_t*>(bytes.data());
     if (*magic != DDS_MAGIC) {
@@ -278,6 +286,7 @@ private:
     ID3D11SamplerState* m_pSampler;
     ID3D11DepthStencilState* m_pSkyDepthState;
     ID3D11RasterizerState* m_pNoCullRS;
+    ID3D11RasterizerState* m_pBackCullRS;
 
     UINT m_width;
     UINT m_height;
@@ -320,6 +329,7 @@ DXApp::DXApp(HINSTANCE hInstance) :
     m_pSampler(nullptr),
     m_pSkyDepthState(nullptr),
     m_pNoCullRS(nullptr),
+    m_pBackCullRS(nullptr),
     m_width(DefaultWindowWidth),
     m_height(DefaultWindowHeight),
     m_yaw(3.0f),
@@ -332,6 +342,7 @@ DXApp::DXApp(HINSTANCE hInstance) :
 }
 
 DXApp::~DXApp() {
+    SAFE_RELEASE(m_pBackCullRS);
     SAFE_RELEASE(m_pNoCullRS);
     SAFE_RELEASE(m_pSkyDepthState);
     SAFE_RELEASE(m_pSampler);
@@ -721,7 +732,6 @@ bool DXApp::Init() {
         return false;
     }
 
-    // Geometry for cube, 24 vertices as in the slides
     static const TextureVertex Vertices[] = {
         // Bottom
         {-0.5f, -0.5f,  0.5f, 0.0f, 1.0f},
@@ -761,12 +771,23 @@ bool DXApp::Init() {
     };
 
     static const USHORT Indices[] = {
+        // Bottom
         0, 2, 1, 0, 3, 2,
-        4, 6, 5, 4, 7, 6,
-        8, 10, 9, 8, 11, 10,
-        12, 14, 13, 12, 15, 14,
-        16, 18, 17, 16, 19, 18,
-        20, 22, 21, 20, 23, 22
+
+        // Top
+        4, 5, 6, 4, 6, 7,
+
+        // Front (+Z)
+        8, 9, 10, 8, 10, 11,
+
+        // Back (-Z)
+        12, 13, 14, 12, 14, 15,
+
+        // Left (-X)
+        16, 17, 18, 16, 18, 19,
+
+        // Right (+X)
+        20, 21, 22, 20, 22, 23
     };
 
     D3D11_BUFFER_DESC vbDesc = {};
@@ -799,7 +820,6 @@ bool DXApp::Init() {
     }
     SetResourceName(m_pIndexBuffer, "IndexBuffer");
 
-    // Skybox geometry: simple cube around the camera
     static const SkyVertex SkyVertices[] = {
         {-1.0f, -1.0f, -1.0f},
         {-1.0f,  1.0f, -1.0f},
@@ -836,15 +856,12 @@ bool DXApp::Init() {
         return false;
     }
 
-    // Буфер сцены: vp + cameraPos
     {
         D3D11_BUFFER_DESC desc = {};
         desc.ByteWidth = sizeof(SceneBuffer);
         desc.Usage = D3D11_USAGE_DYNAMIC;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        desc.MiscFlags = 0;
-        desc.StructureByteStride = 0;
 
         result = m_pDevice->CreateBuffer(&desc, nullptr, &m_pSceneBuffer);
         if (FAILED(result)) {
@@ -854,15 +871,11 @@ bool DXApp::Init() {
         SetResourceName(m_pSceneBuffer, "SceneBuffer");
     }
 
-    // Буфер геометрии: model + size
     {
         D3D11_BUFFER_DESC desc = {};
         desc.ByteWidth = sizeof(GeomBuffer);
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        desc.CPUAccessFlags = 0;
-        desc.MiscFlags = 0;
-        desc.StructureByteStride = 0;
 
         result = m_pDevice->CreateBuffer(&desc, nullptr, &m_pGeomBuffer);
         if (FAILED(result)) {
@@ -872,7 +885,6 @@ bool DXApp::Init() {
         SetResourceName(m_pGeomBuffer, "GeomBuffer");
     }
 
-    // Shaders for cube
     ID3DBlob* pVSCode = nullptr;
     result = CompileShaderFromFile(L"cube.vs", &pVSCode);
     if (FAILED(result)) {
@@ -918,7 +930,6 @@ bool DXApp::Init() {
     }
     SetResourceName(m_pInputLayout, "CubeInputLayout");
 
-    // Shaders for skybox
     ID3DBlob* pSkyVSCode = nullptr;
     result = CompileShaderFromFile(L"skybox.vs", &pSkyVSCode);
     if (FAILED(result)) {
@@ -963,7 +974,6 @@ bool DXApp::Init() {
     }
     SetResourceName(m_pSkyInputLayout, "SkyInputLayout");
 
-    // Textures
     if (!LoadTexture(L"cube.dds")) {
         MessageBox(nullptr, L"Failed to load cube.dds", L"Error", MB_OK);
         return false;
@@ -974,7 +984,6 @@ bool DXApp::Init() {
         return false;
     }
 
-    // Sampler
     {
         D3D11_SAMPLER_DESC desc = {};
         desc.Filter = D3D11_FILTER_ANISOTROPIC;
@@ -999,7 +1008,6 @@ bool DXApp::Init() {
         SetResourceName(m_pSampler, "Sampler");
     }
 
-    // Depth state for skybox
     {
         D3D11_DEPTH_STENCIL_DESC desc = {};
         desc.DepthEnable = TRUE;
@@ -1014,7 +1022,6 @@ bool DXApp::Init() {
         }
     }
 
-    // Rasterizer state without culling
     {
         D3D11_RASTERIZER_DESC desc = {};
         desc.FillMode = D3D11_FILL_SOLID;
@@ -1024,7 +1031,22 @@ bool DXApp::Init() {
 
         result = m_pDevice->CreateRasterizerState(&desc, &m_pNoCullRS);
         if (FAILED(result)) {
-            MessageBox(nullptr, L"CreateRasterizerState failed", L"Error", MB_OK);
+            MessageBox(nullptr, L"CreateRasterizerState (no cull) failed", L"Error", MB_OK);
+            return false;
+        }
+    }
+
+    {
+        D3D11_RASTERIZER_DESC desc = {};
+        desc.FillMode = D3D11_FILL_SOLID;
+        desc.CullMode = D3D11_CULL_BACK;
+        desc.FrontCounterClockwise = FALSE;
+        desc.DepthClipEnable = TRUE;
+        desc.ScissorEnable = TRUE;
+
+        result = m_pDevice->CreateRasterizerState(&desc, &m_pBackCullRS);
+        if (FAILED(result)) {
+            MessageBox(nullptr, L"CreateRasterizerState (back cull) failed", L"Error", MB_OK);
             return false;
         }
     }
@@ -1069,15 +1091,15 @@ void DXApp::Render() {
     m_prev = now;
     m_time += dt;
 
-   // const float cameraSpeed = 1.5f;
-    //if (m_keys[VK_LEFT])  m_yaw -= cameraSpeed * dt;
-    //if (m_keys[VK_RIGHT]) m_yaw += cameraSpeed * dt;
-    //if (m_keys[VK_UP])    m_pitch += cameraSpeed * dt;
-    //if (m_keys[VK_DOWN])  m_pitch -= cameraSpeed * dt;
+    const float cameraSpeed = 1.5f;
+    if (m_keys[VK_LEFT])  m_yaw -= cameraSpeed * dt;
+    if (m_keys[VK_RIGHT]) m_yaw += cameraSpeed * dt;
+    if (m_keys[VK_UP])    m_pitch += cameraSpeed * dt;
+    if (m_keys[VK_DOWN])  m_pitch -= cameraSpeed * dt;
 
-    //const float pitchLimit = XM_PIDIV2 - 0.05f;
-    //if (m_pitch > pitchLimit) m_pitch = pitchLimit;
-    //if (m_pitch < -pitchLimit) m_pitch = -pitchLimit;
+    const float pitchLimit = XMConvertToRadians(75.0f);
+    if (m_pitch > pitchLimit) m_pitch = pitchLimit;
+    if (m_pitch < -pitchLimit) m_pitch = -pitchLimit;
 
     float cy = cosf(m_yaw);
     float sy = sinf(m_yaw);
@@ -1097,8 +1119,12 @@ void DXApp::Render() {
     XMMATRIX v = XMMatrixLookAtLH(eye, target, up);
     XMMATRIX p = XMMatrixPerspectiveFovLH(XM_PIDIV4, float(m_width) / float(m_height), 0.1f, 100.0f);
 
+    XMMATRIX vSky = v;
+    vSky.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+
     SceneBuffer sceneBuffer = {};
-    XMStoreFloat4x4(&sceneBuffer.vp, XMMatrixTranspose(XMMatrixMultiply(v, p)));
+    XMStoreFloat4x4(&sceneBuffer.vp, XMMatrixMultiply(v, p));
+    XMStoreFloat4x4(&sceneBuffer.vpSky, XMMatrixMultiply(vSky, p));;
     XMStoreFloat4(&sceneBuffer.cameraPos, eye);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
@@ -1129,15 +1155,13 @@ void DXApp::Render() {
     D3D11_RECT rect = { 0, 0, (LONG)m_width, (LONG)m_height };
     m_pDeviceContext->RSSetScissorRects(1, &rect);
 
-    m_pDeviceContext->RSSetState(m_pNoCullRS);
-
-    // ----- Draw cubemap skybox -----
+    // Skybox
     {
+        m_pDeviceContext->OMSetDepthStencilState(m_pSkyDepthState, 0);
+        m_pDeviceContext->RSSetState(m_pNoCullRS);
         GeomBuffer geomBuffer = {};
-        XMMATRIX model = XMMatrixIdentity();
-        XMStoreFloat4x4(&geomBuffer.model, XMMatrixTranspose(model));
-        geomBuffer.size = XMFLOAT4(25.0f, 25.0f, 25.0f, 1.0f);
-
+        XMStoreFloat4x4(&geomBuffer.model, XMMatrixTranspose(XMMatrixIdentity()));
+        geomBuffer.size = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
 
         ID3D11Buffer* cbs[] = { m_pSceneBuffer, m_pGeomBuffer };
@@ -1161,14 +1185,18 @@ void DXApp::Render() {
         m_pDeviceContext->PSSetSamplers(0, 1, samplers);
 
         m_pDeviceContext->OMSetDepthStencilState(m_pSkyDepthState, 0);
+        m_pDeviceContext->RSSetState(m_pNoCullRS);
+
         m_pDeviceContext->DrawIndexed(36, 0, 0);
     }
 
-    // ----- Draw textured cube -----
+    // Textured cube
     {
+        m_pDeviceContext->OMSetDepthStencilState(nullptr, 0);
+        m_pDeviceContext->RSSetState(m_pBackCullRS);
         GeomBuffer geomBuffer = {};
-        XMMATRIX model = XMMatrixRotationY(m_time) * XMMatrixRotationX(m_time * 0.5f);
-        XMStoreFloat4x4(&geomBuffer.model, XMMatrixTranspose(model));
+        XMMATRIX model = XMMatrixRotationY(m_time);
+        XMStoreFloat4x4(&geomBuffer.model, model);
         geomBuffer.size = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
         m_pDeviceContext->UpdateSubresource(m_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
@@ -1194,8 +1222,11 @@ void DXApp::Render() {
         m_pDeviceContext->PSSetSamplers(0, 1, samplers);
 
         m_pDeviceContext->OMSetDepthStencilState(nullptr, 0);
+        m_pDeviceContext->RSSetState(m_pBackCullRS);
+
         m_pDeviceContext->DrawIndexed(36, 0, 0);
     }
+
     wchar_t title[256];
     swprintf_s(title, L"HW4 | yaw: %.2f  pitch: %.2f  radius: %.2f", m_yaw, m_pitch, m_radius);
     SetWindowText(m_hWnd, title);
