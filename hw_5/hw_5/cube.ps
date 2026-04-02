@@ -1,0 +1,15 @@
+Texture2D colorTexture : register(t0);
+SamplerState colorSampler : register(s0);
+
+struct VSOutput
+{
+    float4 pos   : SV_Position;
+    float2 uv    : TEXCOORD;
+    float4 color : COLOR0;
+};
+
+float4 ps(VSOutput pixel) : SV_Target0
+{
+    float4 tex = colorTexture.Sample(colorSampler, pixel.uv);
+    return tex * pixel.color;
+}
