@@ -1,12 +1,13 @@
 cbuffer SceneBuffer : register(b0)
 {
-    float4x4 vp;
+    row_major float4x4 vp;
+    row_major float4x4 vpSky;
     float4 cameraPos;
 };
 
 cbuffer GeomBuffer : register(b1)
 {
-    float4x4 model;
+    row_major float4x4 model;
     float4 size;
 };
 
@@ -25,7 +26,8 @@ struct VSOutput
 VSOutput vs(VSInput input)
 {
     VSOutput result;
-    result.pos = mul(vp, mul(model, float4(input.pos, 1.0f)));
+    float4 p = float4(input.pos, 1.0f);
+    result.pos = mul(mul(p, model), vp);
     result.uv = input.uv;
     return result;
 }

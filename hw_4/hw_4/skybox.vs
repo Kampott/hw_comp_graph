@@ -1,13 +1,14 @@
 cbuffer SceneBuffer : register(b0)
 {
-    float4x4 vp;
+    row_major float4x4 vp;
+    row_major float4x4 vpSky;
     float4 cameraPos;
 };
 
 cbuffer GeomBuffer : register(b1)
 {
-    float4x4 model;
-    float4 size; // x - size of sky sphere / sky cube
+    row_major float4x4 model;
+    float4 size;
 };
 
 struct VSInput
@@ -24,9 +25,11 @@ struct VSOutput
 VSOutput vs(VSInput vertex)
 {
     VSOutput result;
-    float3 pos = cameraPos.xyz + vertex.pos * size.x;
-    float4 clipPos = mul(vp, mul(model, float4(pos, 1.0)));
-    result.pos = clipPos.xyww; // force z = w so depth = 1.0 after divide
+
+    float4 worldPos = mul(float4(vertex.pos * size.x, 1.0f), model);
+    float4 clipPos = mul(worldPos, vpSky);
+    result.pos = clipPos.xyww;
     result.localPos = vertex.pos;
+
     return result;
 }
