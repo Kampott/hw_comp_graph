@@ -82,15 +82,19 @@ struct SkyVertex {
     float x, y, z;
 };
 
+struct MipData {
+    UINT32 pitch;
+    UINT32 dataSize;
+    size_t offset;
+};
+
 struct TextureDesc {
-    UINT32 pitch = 0;
     UINT32 mipmapsCount = 1;
     DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN;
     UINT32 width = 0;
     UINT32 height = 0;
-    void* pData = nullptr;
-
     std::vector<uint8_t> storage;
+    std::vector<MipData> mips;
 };
 
 struct Light {
@@ -228,9 +232,8 @@ static DXGI_FORMAT DDSFormatFromPixelFormat(const DDS_PIXELFORMAT& pf) {
 
 static bool LoadDDS(const wchar_t* fileName, TextureDesc& textureDesc, bool topMipOnly = true) {
     FILE* file = nullptr;
-    if (_wfopen_s(&file, fileName, L"rb") != 0 || !file) {
+    if (_wfopen_s(&file, fileName, L"rb") != 0 || !file)
         return false;
-    }
 
     _fseeki64(file, 0, SEEK_END);
     long long fileSize = _ftelli64(file);
@@ -244,63 +247,62 @@ static bool LoadDDS(const wchar_t* fileName, TextureDesc& textureDesc, bool topM
     std::vector<uint8_t> bytes((size_t)fileSize);
     size_t readCount = fread(bytes.data(), 1, bytes.size(), file);
     fclose(file);
-    if (readCount != bytes.size()) {
+    if (readCount != bytes.size())
         return false;
-    }
 
     const uint32_t* magic = reinterpret_cast<const uint32_t*>(bytes.data());
-    if (*magic != DDS_MAGIC) {
+    if (*magic != DDS_MAGIC)
         return false;
-    }
 
     const DDS_HEADER* header = reinterpret_cast<const DDS_HEADER*>(bytes.data() + sizeof(uint32_t));
-    if (header->size != 124 || header->ddspf.size != 32) {
+    if (header->size != 124 || header->ddspf.size != 32)
         return false;
-    }
 
     DXGI_FORMAT fmt = DDSFormatFromPixelFormat(header->ddspf);
-    if (fmt == DXGI_FORMAT_UNKNOWN) {
+    if (fmt == DXGI_FORMAT_UNKNOWN)
         return false;
-    }
 
-    UINT width = header->width;
-    UINT height = header->height;
-    UINT mipLevels = (header->flags & DDSD_MIPMAPCOUNT) && header->mipMapCount > 0 ? header->mipMapCount : 1;
-    if (topMipOnly) {
+    UINT mipLevels = (header->flags & DDSD_MIPMAPCOUNT) && header->mipMapCount > 0
+        ? header->mipMapCount : 1;
+    if (topMipOnly)
         mipLevels = 1;
-    }
 
-    UINT pitch = 0;
-    UINT topMipSize = 0;
+    textureDesc.fmt = fmt;
+    textureDesc.width = header->width;
+    textureDesc.height = header->height;
+    textureDesc.mipmapsCount = mipLevels;
+    textureDesc.mips.resize(mipLevels);
 
-    if (IsBlockCompressed(fmt)) {
-        UINT blockBytes = GetBytesPerBlock(fmt);
-        UINT blockWidth = (std::max)(1u, (width + 3u) / 4u);
-        UINT blockHeight = (std::max)(1u, (height + 3u) / 4u);
-        pitch = blockWidth * blockBytes;
-        topMipSize = pitch * blockHeight;
-    }
-    else {
-        UINT bpp = GetBytesPerPixel(fmt);
-        if (bpp == 0) return false;
-        pitch = width * bpp;
-        topMipSize = pitch * height;
+    size_t totalSize = 0;
+    UINT w = header->width, h = header->height;
+    for (UINT i = 0; i < mipLevels; i++) {
+        UINT pitch = 0, mipSize = 0;
+        if (IsBlockCompressed(fmt)) {
+            UINT blockBytes = GetBytesPerBlock(fmt);
+            UINT bw = (std::max)(1u, (w + 3u) / 4u);
+            UINT bh = (std::max)(1u, (h + 3u) / 4u);
+            pitch = bw * blockBytes;
+            mipSize = pitch * bh;
+        }
+        else {
+            UINT bpp = GetBytesPerPixel(fmt);
+            if (bpp == 0) return false;
+            pitch = w * bpp;
+            mipSize = pitch * h;
+        }
+        textureDesc.mips[i] = { pitch, mipSize, totalSize };
+        totalSize += mipSize;
+        w = (std::max)(1u, w / 2u);
+        h = (std::max)(1u, h / 2u);
     }
 
     const uint8_t* src = bytes.data() + sizeof(uint32_t) + sizeof(DDS_HEADER);
     size_t remaining = bytes.size() - (sizeof(uint32_t) + sizeof(DDS_HEADER));
-    if (remaining < topMipSize) {
+    if (remaining < totalSize)
         return false;
-    }
 
-    textureDesc.width = width;
-    textureDesc.height = height;
-    textureDesc.mipmapsCount = mipLevels;
-    textureDesc.fmt = fmt;
-    textureDesc.pitch = pitch;
-    textureDesc.storage.resize(topMipSize);
-    std::memcpy(textureDesc.storage.data(), src, topMipSize);
-    textureDesc.pData = textureDesc.storage.data();
+    textureDesc.storage.resize(totalSize);
+    std::memcpy(textureDesc.storage.data(), src, totalSize);
 
     return true;
 }
@@ -701,7 +703,7 @@ bool DXApp::LoadTextureFromDDS(const std::wstring& fileName, ID3D11Texture2D** p
     if (!ppTexture || !ppView) return false;
 
     TextureDesc textureDesc;
-    if (!LoadDDS(fileName.c_str(), textureDesc, true)) {
+    if (!LoadDDS(fileName.c_str(), textureDesc, false)) {
         return false;
     }
 
@@ -718,12 +720,15 @@ bool DXApp::LoadTextureFromDDS(const std::wstring& fileName, ID3D11Texture2D** p
     desc.Height = textureDesc.height;
     desc.Width = textureDesc.width;
 
-    D3D11_SUBRESOURCE_DATA data = {};
-    data.pSysMem = textureDesc.pData;
-    data.SysMemPitch = textureDesc.pitch;
-    data.SysMemSlicePitch = 0;
+    std::vector<D3D11_SUBRESOURCE_DATA> subData(textureDesc.mipmapsCount);
+    for (UINT i = 0; i < textureDesc.mipmapsCount; i++) {
+        subData[i].pSysMem = textureDesc.storage.data() + textureDesc.mips[i].offset;
+        subData[i].SysMemPitch = textureDesc.mips[i].pitch;
+        subData[i].SysMemSlicePitch = 0;
+    }
 
-    HRESULT result = m_pDevice->CreateTexture2D(&desc, &data, ppTexture);
+
+    HRESULT result = m_pDevice->CreateTexture2D(&desc, subData.data(), ppTexture);
     if (FAILED(result)) return false;
 
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -772,60 +777,49 @@ bool DXApp::CreateFlatNormalMap() {
 }
 
 bool DXApp::LoadTextureArray() {
-    const std::wstring names[] = { L"cube.dds", L"cube2.dds" }; // две разные текстуры
+    const std::wstring names[] = { L"cube.dds", L"cube2.dds" };
     const UINT count = 2;
 
     TextureDesc descs[2];
     for (UINT i = 0; i < count; i++) {
-        if (!LoadDDS(names[i].c_str(), descs[i], true)) // false = все мипы
+        if (!LoadDDS(names[i].c_str(), descs[i], false))
             return false;
-        descs[i].pData = descs[i].storage.data();
     }
+
+    for (UINT i = 1; i < count; i++) {
+        if (GetBytesPerBlock(descs[i].fmt) == 0) {
+            MessageBox(nullptr, L"TextureArray: unsupported format", L"Error", MB_OK);
+            return false;
+        }
+        if (descs[i].width != descs[0].width || descs[i].height != descs[0].height) {
+            MessageBox(nullptr, L"TextureArray: size mismatch", L"Error", MB_OK);
+            return false;
+        }
+        if (descs[i].fmt != descs[0].fmt) {
+            MessageBox(nullptr, L"TextureArray: format mismatch", L"Error", MB_OK);
+            return false;
+        }
+    }
+
+    UINT mipLevels = descs[0].mipmapsCount;
 
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Format = descs[0].fmt;
     desc.ArraySize = count;
-    desc.MipLevels = 1;
+    desc.MipLevels = mipLevels;
     desc.Usage = D3D11_USAGE_IMMUTABLE;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     desc.SampleDesc.Count = 1;
     desc.Width = descs[0].width;
     desc.Height = descs[0].height;
 
-    std::vector<D3D11_SUBRESOURCE_DATA> data(desc.MipLevels * count);
-    for (UINT i = 0; i < count; i++) {
-        if (descs[i].pData == nullptr) {
-            MessageBox(nullptr, L"TextureArray: pData is null", L"Error", MB_OK);
-            return false;
-        }
-        if (GetBytesPerBlock(descs[i].fmt) == 0) {
-            MessageBox(nullptr, L"TextureArray: unsupported format (not BC1/2/3)", L"Error", MB_OK);
-            return false;
-        }
-        if (descs[i].width != descs[0].width || descs[i].height != descs[0].height) {
-            MessageBox(nullptr, L"TextureArray: size mismatch between textures", L"Error", MB_OK);
-            return false;
-        }
-        if (descs[i].fmt != descs[0].fmt) {
-            MessageBox(nullptr, L"TextureArray: format mismatch between textures", L"Error", MB_OK);
-            return false;
-        }
-    }
+
+    std::vector<D3D11_SUBRESOURCE_DATA> data(mipLevels * count);
     for (UINT j = 0; j < count; j++) {
-        UINT32 blockWidth = max(1u, (descs[j].width + 3u) / 4u);
-        UINT32 blockHeight = max(1u, (descs[j].height + 3u) / 4u);
-        UINT32 pitch = blockWidth * GetBytesPerBlock(descs[j].fmt);
-        const char* pSrc = reinterpret_cast<const char*>(descs[j].pData);
-
-        for (UINT i = 0; i < desc.MipLevels; i++) {
-            data[j * desc.MipLevels + i].pSysMem = pSrc;
-            data[j * desc.MipLevels + i].SysMemPitch = pitch;
-            data[j * desc.MipLevels + i].SysMemSlicePitch = 0;
-
-            pSrc += pitch * blockHeight;
-            blockHeight = max(1u, blockHeight / 2);
-            blockWidth = max(1u, blockWidth / 2);
-            pitch = blockWidth * GetBytesPerBlock(descs[j].fmt);
+        for (UINT i = 0; i < mipLevels; i++) {
+            data[j * mipLevels + i].pSysMem = descs[j].storage.data() + descs[j].mips[i].offset;
+            data[j * mipLevels + i].SysMemPitch = descs[j].mips[i].pitch;
+            data[j * mipLevels + i].SysMemSlicePitch = 0;
         }
     }
 
@@ -837,7 +831,7 @@ bool DXApp::LoadTextureArray() {
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
     srvDesc.Texture2DArray.ArraySize = count;
     srvDesc.Texture2DArray.FirstArraySlice = 0;
-    srvDesc.Texture2DArray.MipLevels = desc.MipLevels;
+    srvDesc.Texture2DArray.MipLevels = mipLevels;
     srvDesc.Texture2DArray.MostDetailedMip = 0;
 
     hr = m_pDevice->CreateShaderResourceView(m_pTextureArray, &srvDesc, &m_pTextureArrayView);
@@ -885,8 +879,8 @@ bool DXApp::LoadCubemap() {
 
     D3D11_SUBRESOURCE_DATA data[6];
     for (int i = 0; i < 6; i++) {
-        data[i].pSysMem = texDescs[i].pData;
-        data[i].SysMemPitch = texDescs[i].pitch;
+        data[i].pSysMem = texDescs[i].storage.data() + texDescs[i].mips[0].offset;
+        data[i].SysMemPitch = texDescs[i].mips[0].pitch;
         data[i].SysMemSlicePitch = 0;
     }
 
