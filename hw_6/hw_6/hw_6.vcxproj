@@ -18,16 +18,21 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cube.ps" />
+    <None Include="cube.vs" />
+    <None Include="lighting.hlsli" />
+    <None Include="skybox.ps" />
+    <None Include="skybox.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="hw_6.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-<<<<<<<< HEAD:hw_2/homework2/homework2.vcxproj
-    <ProjectGuid>{1415ef10-5f0d-429d-a5a6-2ffe08344243}</ProjectGuid>
-    <RootNamespace>homework2</RootNamespace>
-========
-    <ProjectGuid>{856fc397-c492-4f6b-a41d-e65a9c160217}</ProjectGuid>
-    <RootNamespace>hw5</RootNamespace>
->>>>>>>> 9156fa4 (help):hw_5/hw_5/hw_5.vcxproj
+    <ProjectGuid>{8125dd8b-85af-4edb-ac04-be659a8f71fe}</ProjectGuid>
+    <RootNamespace>hw6</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -115,22 +120,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-<<<<<<<< HEAD:hw_2/homework2/homework2.vcxproj
-      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
-xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
-========
-      <Command>xcopy /Y /D "$(ProjectDir)cube.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_posx.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_negx.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_posy.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_negy.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_posz.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_negz.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)cube.vs" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)cube.ps" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)skybox.vs" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)skybox.ps" "$(TargetDir)"</Command>
->>>>>>>> 9156fa4 (help):hw_5/hw_5/hw_5.vcxproj
+      <Command>xcopy /Y "$(ProjectDir)*.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)*.ps" "$(OutDir)"
+xcopy /Y "$(ProjectDir)*.hlsli" "$(OutDir)"
+xcopy /Y "$(ProjectDir)*.dds" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,41 +142,12 @@ xcopy /Y /D "$(ProjectDir)skybox.ps" "$(TargetDir)"</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-<<<<<<<< HEAD:hw_2/homework2/homework2.vcxproj
-      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
-xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
+      <Command>xcopy /Y "$(ProjectDir)*.vs" "$(OutDir)"
+xcopy /Y "$(ProjectDir)*.ps" "$(OutDir)"
+xcopy /Y "$(ProjectDir)*.hlsli" "$(OutDir)"
+xcopy /Y "$(ProjectDir)*.dds" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="homework2.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="pixel.ps" />
-    <None Include="vertex.vs" />
-========
-      <Command>xcopy /Y /D "$(ProjectDir)cube.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_posx.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_negx.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_posy.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_negy.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_posz.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)sky_negz.dds" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)cube.vs" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)cube.ps" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)skybox.vs" "$(TargetDir)"
-xcopy /Y /D "$(ProjectDir)skybox.ps" "$(TargetDir)"</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="hw_5.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cube.ps" />
-    <None Include="cube.vs" />
-    <None Include="skybox.ps" />
-    <None Include="skybox.vs" />
->>>>>>>> 9156fa4 (help):hw_5/hw_5/hw_5.vcxproj
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

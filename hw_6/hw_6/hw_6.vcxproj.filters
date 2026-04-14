@@ -15,21 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-<<<<<<<< HEAD:hw_2/homework2/homework2.vcxproj.filters
-    <ClCompile Include="homework2.cpp">
-========
-    <ClCompile Include="hw_5.cpp">
->>>>>>>> 9156fa4 (help):hw_5/hw_5/hw_5.vcxproj.filters
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-<<<<<<<< HEAD:hw_2/homework2/homework2.vcxproj.filters
-    <None Include="pixel.ps">
-      <Filter>Исходные файлы</Filter>
-    </None>
-    <None Include="vertex.vs">
-========
     <None Include="cube.ps">
       <Filter>Исходные файлы</Filter>
     </None>
@@ -40,8 +25,15 @@
       <Filter>Исходные файлы</Filter>
     </None>
     <None Include="skybox.vs">
->>>>>>>> 9156fa4 (help):hw_5/hw_5/hw_5.vcxproj.filters
       <Filter>Исходные файлы</Filter>
     </None>
+    <None Include="lighting.hlsli">
+      <Filter>Исходные файлы</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="hw_6.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
