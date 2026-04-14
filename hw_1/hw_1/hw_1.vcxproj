@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{1415ef10-5f0d-429d-a5a6-2ffe08344243}</ProjectGuid>
-    <RootNamespace>homework2</RootNamespace>
+    <ProjectGuid>{042093b8-d22a-4d49-ab18-425233a305df}</ProjectGuid>
+    <RootNamespace>hw1</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -109,10 +109,6 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <PostBuildEvent>
-      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
-xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -129,17 +125,9 @@ xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <PostBuildEvent>
-      <Command>xcopy /Y "$(ProjectDir)vertex.vs" "$(OutDir)"
-xcopy /Y "$(ProjectDir)pixel.ps" "$(OutDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="homework2.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="pixel.ps" />
-    <None Include="vertex.vs" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

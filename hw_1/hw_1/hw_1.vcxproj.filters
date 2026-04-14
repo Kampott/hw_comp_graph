@@ -15,16 +15,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="homework2.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="pixel.ps">
-      <Filter>Исходные файлы</Filter>
-    </None>
-    <None Include="vertex.vs">
-      <Filter>Исходные файлы</Filter>
-    </None>
   </ItemGroup>
 </Project>
