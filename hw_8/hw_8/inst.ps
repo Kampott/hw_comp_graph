@@ -1,0 +1,89 @@
+#include "lighting.hlsli"
+
+cbuffer SceneBuffer : register(b0)
+{
+    row_major float4x4 vp;
+    float4 cameraPos;
+    int4 lightCount;
+    Light lights[10];
+    float4 ambientColor;
+};
+
+struct GeomBuffer
+{
+    row_major float4x4 model;
+    row_major float4x4 norm;
+    float4 shineSpeedTexIdNM; // x - shininess, y - rotation speed, z - texture id, w - normal map presence
+    float4 posAngle;          // xyz - position, w - current angle
+};
+
+cbuffer GeomBufferInst : register(b1)
+{
+    GeomBuffer geomBuffer[100];
+};
+
+cbuffer GeomBufferInstVis : register(b2)
+{
+    uint4 ids[100];
+};
+
+Texture2DArray colorTexture   : register(t0);
+Texture2D      normalTexture  : register(t1);
+SamplerState   colorSampler   : register(s0);
+
+struct VSOutput
+{
+    float4 pos      : SV_Position;
+    float4 worldPos : POSITION1;
+    float3 norm     : NORMAL;
+    float3 tang     : TANGENT;
+    float2 uv       : TEXCOORD;
+    nointerpolation uint instId : INST_ID;
+};
+
+float4 ps(VSOutput pixel) : SV_Target0
+{
+    uint idx   = ids[pixel.instId].x;   // реальный индекс инстанса
+    uint flags = asuint(geomBuffer[idx].shineSpeedTexIdNM.w);
+
+    float3 albedo = colorTexture.Sample(
+        colorSampler,
+        float3(pixel.uv, geomBuffer[idx].shineSpeedTexIdNM.z)).rgb;
+
+    float3 normal;
+    // Условие из презентации (слайд 21): lightCount.y > 0 И flags == 1
+    if (lightCount.y > 0 && flags == 1)
+    {
+        float3 binorm    = normalize(cross(pixel.norm, pixel.tang));
+        float3 localNorm = normalTexture.Sample(colorSampler, pixel.uv).xyz * 2.0 - 1.0;
+        normal = localNorm.x * normalize(pixel.tang)
+               + localNorm.y * binorm
+               + localNorm.z * normalize(pixel.norm);
+        normal = normalize(normal);
+    }
+    else
+    {
+        normal = normalize(pixel.norm);
+    }
+
+    float3 finalColor = ambientColor.rgb * albedo;
+    float  shine      = geomBuffer[idx].shineSpeedTexIdNM.x;
+
+    for (int i = 0; i < lightCount.x; i++)
+    {
+        float3 lightDir  = lights[i].pos.xyz - pixel.worldPos.xyz;
+        float  lightDist = length(lightDir);
+        lightDir /= lightDist;
+
+        float atten = 1.0 / max(lightDist * lightDist, 1e-4f);
+
+        finalColor += albedo * max(dot(lightDir, normal), 0.0) * atten * lights[i].color.xyz;
+
+        float3 viewDir    = normalize(cameraPos.xyz - pixel.worldPos.xyz);
+        float3 reflectDir = reflect(-lightDir, normal);
+        float  spec       = (shine > 0.0) ? pow(max(dot(viewDir, reflectDir), 0.0), shine) : 0.0;
+        finalColor += spec * atten * lights[i].color.xyz;
+    }
+
+    return float4(finalColor, 1.0f);
+}
