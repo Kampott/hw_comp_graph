@@ -44,7 +44,7 @@ float4 ps(VSOutput pixel) : SV_Target0
 #ifdef USE_NORMAL_MAP
     float3 binorm    = normalize(cross(pixel.norm, pixel.tang));
     float3 localNorm = normalTexture.Sample(colorSampler, pixel.uv).xyz * 2.0 - float3(1.0, 1.0, 1.0);
-    normal = localNorm.x * normalize(pixel.tang) + localNorm.y * binorm + localNorm.z * normalize(pixel.norm);
+    normal = normalize(localNorm.x * normalize(pixel.tang) + localNorm.y * binorm + localNorm.z * normalize(pixel.norm));
 #else
     normal = normalize(pixel.norm);
 #endif
@@ -57,7 +57,7 @@ float4 ps(VSOutput pixel) : SV_Target0
         float  lightDist = length(lightDir);
         lightDir /= lightDist;
 
-        float atten = 1.0 / max(lightDist * lightDist, 1e-4f);
+        float atten = 1.0 / (1.0 + lightDist * lightDist);
 
         finalColor += albedo * max(dot(lightDir, normal), 0) * atten * lights[i].color.xyz;
 
