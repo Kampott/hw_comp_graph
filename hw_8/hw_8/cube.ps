@@ -56,7 +56,7 @@ float4 ps(VSOutput pixel) : SV_Target0
         float  lightDist = length(lightDir);
         lightDir /= lightDist;
 
-        float atten = 1.0 / max(lightDist * lightDist, 1e-4f);
+        float atten = 1.0 / (1.0 + lightDist * lightDist);
 
         finalColor += albedo * max(dot(lightDir, normal), 0) * atten * lights[i].color.xyz;
 
