@@ -510,12 +510,11 @@ DXApp::~DXApp() {
     SAFE_RELEASE(m_pBackCullRS);
     SAFE_RELEASE(m_pNoCullRS);
     SAFE_RELEASE(m_pAlphaBlendState);
+    SAFE_RELEASE(m_pAdditiveBlendState);
     SAFE_RELEASE(m_pTransparentDepthState);
     SAFE_RELEASE(m_pSkyDepthState);
     SAFE_RELEASE(m_pOpaqueDepthState);
     SAFE_RELEASE(m_pSampler);
-
-    SAFE_RELEASE(m_pAdditiveBlendState);
 
     SAFE_RELEASE(m_pCubemapView);
     SAFE_RELEASE(m_pCubemapTexture);
@@ -532,6 +531,8 @@ DXApp::~DXApp() {
     SAFE_RELEASE(m_pSkyVS);
 
     SAFE_RELEASE(m_pInputLayout);
+    SAFE_RELEASE(m_pPixelShaderEmissive);
+    SAFE_RELEASE(m_pPixelShaderNormalMap);
     SAFE_RELEASE(m_pPixelShader);
     SAFE_RELEASE(m_pVertexShader);
 
@@ -548,8 +549,6 @@ DXApp::~DXApp() {
     SAFE_RELEASE(m_pSwapChain);
     SAFE_RELEASE(m_pDeviceContext);
     SAFE_RELEASE(m_pDevice);
-    SAFE_RELEASE(m_pPixelShaderEmissive);
-    SAFE_RELEASE(m_pPixelShaderNormalMap);
     SAFE_RELEASE(m_pInstVS);
     SAFE_RELEASE(m_pInstPS);
 
@@ -1362,10 +1361,10 @@ bool DXApp::Init() {
 
     struct InstDesc { float x, y, z, rotSpeed, shininess, texId; };
     InstDesc descs4[4] = {
-        { -2.5f, 0.0f,  0.0f,  0.8f,  48.0f, 0.0f }, // старая текстура
+        { 0.5f, 0.0f,  0.0f,  0.8f,  48.0f, 0.0f }, // старая текстура
         {  0.0f, 0.0f,  2.5f, -0.5f,  32.0f, 0.0f }, // старая текстура
-        {  2.0f, 0.0f,  0.0f,  1.1f,  24.0f, 1.0f }, // новая текстура
-        {  0.0f, 0.0f, -2.5f, -0.9f,  16.0f, 1.0f }, // новая текстура
+        {  2.0f, 0.0f,  0.0f,  1.1f,  2.0f, 1.0f }, // новая текстура
+        {  0.0f, 0.0f, -2.5f, -0.9f,  10.0f, 1.0f }, // новая текстура
     };
     for (int i = 0; i < 4; i++) {
         GeomBufferInstData inst = {};
@@ -1716,13 +1715,13 @@ void DXApp::Render() {
 
     const float t = m_time;
     sceneBuffer.lights[0].pos = Point4f(2.5f, 2.5f, 0.0f, 1.0f);
-    sceneBuffer.lights[0].color = Point4f(10.0f, 10.0f, 10.0f, 1.0f);
+    sceneBuffer.lights[0].color = Point4f(3.0f, 3.0f, 3.0f, 1.0f);
 
     sceneBuffer.lights[1].pos = Point4f(-2.5f, -1.0f, 0.0f, 1.0f);
-    sceneBuffer.lights[1].color = Point4f(10.0f, 10.0f, 10.0f, 1.0f);
+    sceneBuffer.lights[1].color = Point4f(3.0f, 3.0f, 3.0f, 1.0f);
 
     sceneBuffer.lights[2].pos = Point4f(0.0f, 2.5f, 0.0f, 1.0f);
-    sceneBuffer.lights[2].color = Point4f(10.0f, 10.0f, 10.0f, 1.0f);
+    sceneBuffer.lights[2].color = Point4f(3.0f, 3.0f, 3.0f, 1.0f);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT result = m_pDeviceContext->Map(m_pSceneBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
