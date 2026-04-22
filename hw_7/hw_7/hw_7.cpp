@@ -866,7 +866,7 @@ bool DXApp::LoadCubemap() {
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Format = textureFmt;
     desc.ArraySize = 6;
-    desc.MipLevels = 1;
+    desc.MipLevels = texDescs[0].mipmapsCount;
     desc.Usage = D3D11_USAGE_IMMUTABLE;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     desc.CPUAccessFlags = 0;
@@ -889,7 +889,7 @@ bool DXApp::LoadCubemap() {
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Format = textureFmt;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-    srvDesc.TextureCube.MipLevels = 1;
+    srvDesc.TextureCube.MipLevels = texDescs[0].mipmapsCount;
     srvDesc.TextureCube.MostDetailedMip = 0;
 
     result = m_pDevice->CreateShaderResourceView(m_pCubemapTexture, &srvDesc, &m_pCubemapView);
@@ -1326,10 +1326,8 @@ bool DXApp::Init() {
     }
 
     if (!LoadTextureFromDDS(L"cube_normal.dds", &m_pNormalTexture, &m_pNormalTextureView)) {
-        if (!CreateFlatNormalMap()) {
-            MessageBox(nullptr, L"Failed to create fallback normal map", L"Error", MB_OK);
-            return false;
-        }
+        MessageBox(nullptr, L"Failed to load cube_normal.dds", L"Error", MB_OK);
+        return false;
     }
 
     if (!LoadTextureArray()) {
