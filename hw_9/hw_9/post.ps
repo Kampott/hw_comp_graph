@@ -1,0 +1,19 @@
+Texture2D    colorTexture  : register(t0);
+SamplerState colorSampler  : register(s0);
+
+struct VSOutput
+{
+    float4 pos : SV_Position;
+    float2 uv  : TEXCOORD;
+};
+
+float4 ps(VSOutput pixel) : SV_Target0
+{
+    float3 color = colorTexture.Sample(colorSampler, pixel.uv).xyz;
+
+    float r = dot(color, float3(0.393, 0.769, 0.189));
+    float g = dot(color, float3(0.349, 0.686, 0.168));
+    float b = dot(color, float3(0.272, 0.534, 0.131));
+
+    return float4(r, g, b, 1.0);
+}
